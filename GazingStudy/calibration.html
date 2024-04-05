@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGazer Demo</title>
+    <link rel="stylesheet" type="text/css" href="./css/style.css">
+    <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <script src="./webgazer.js"></script>
+    <style>
+        #calibrationImage {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body LANG="en-US" LINK="#0000ff" DIR="LTR">
+<canvas id="plotting_canvas" width="500" height="500" style="cursor:crosshair;"></canvas>
+
+<script src="./node_modules/sweetalert/dist/sweetalert.min.js"></script>
+
+<script src="./js/main.js"></script>
+<script src="./js/calibration.js"></script>
+<script src="./js/precision_calculation.js"></script>
+<script src="./js/precision_store_points.js"></script>
+
+<nav id="webgazerNavbar" class="navbar navbar-expand-lg navbar-default navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <!-- The hamburger menu button -->
+            <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#myNavbar">
+                <span class="navbar-toggler-icon">Menu</span>
+            </button>
+        </div>
+        <div class="collapse navbar-collapse" id="myNavbar">
+            <ul class="nav navbar-nav">
+                <!-- Accuracy -->
+                <li id="Accuracy"><a>Not yet Calibrated</a></li>
+                <li><a onclick="Restart()" href="#">Recalibrate</a></li>
+                <li><a onclick="webgazer.applyKalmanFilter(!webgazer.params.applyKalmanFilter)" href="#">Toggle Kalman Filter</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a class="helpBtn" onclick="startStudy()" href="#"><span class="glyphicon glyphicon-cog"></span> Start Study</a></li>
+                <li><button class="btn btn-primary" onclick="downloadGazeData()">Download Gaze Data</button></li>
+                <li><button id="start-live-plot" class="btn btn-success">Start Live Plot</button></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Calibration points -->
+<div class="calibrationDiv">
+    <input type="button" class="Calibration" id="Pt1"></input>
+    <input type="button" class="Calibration" id="Pt2"></input>
+    <input type="button" class="Calibration" id="Pt3"></input>
+    <input type="button" class="Calibration" id="Pt4"></input>
+    <input type="button" class="Calibration" id="Pt5"></input>
+    <input type="button" class="Calibration" id="Pt6"></input>
+    <input type="button" class="Calibration" id="Pt7"></input>
+    <input type="button" class="Calibration" id="Pt8"></input>
+    <input type="button" class="Calibration" id="Pt9"></input>
+</div>
+
+<!-- Modal -->
+<div id="helpModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-body">
+                <img src="demo.jpeg" width="100%" height="100%" alt="webgazer demo instructions"></img>
+            </div>
+            <div class="modal-footer">
+                <button id="closeBtn" type="button" class="btn btn-default" data-bs-dismiss="modal">Close & load saved model </button>
+                <button type="button" id='start_calibration' class="btn btn-primary" data-bs-dismiss="modal" onclick="Restart()">Calibrate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Latest compiled JavaScript -->
+<script src="./js/resize_canvas.js"></script>
+<script src="./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<img id="calibrationImage" src="demo.jpeg" width="500" height="500">
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+    var gazeData = []; // Array to store gaze data
+
+    // Begin WebGazer
+    webgazer.begin();
+
+    // Listen for gaze data
+    webgazer.setGazeListener(function(data, clock) {
+        // Store gaze data
+        gazeData.push({ x: data.x, y: data.y });
+    });
+
+    function showImages() {
+        // Display images on the webpage
+        document.getElementById('calibrationImage').style.display = 'block';
+    }
+
+    function downloadGazeData() {
+        // Convert gaze positions to CSV format
+        var csvContent = "X,Y\n";
+        gazeData.forEach(function(entry) {
+            csvContent += entry.x + "," + entry.y + "\n";
+        });
+
+        // Create a download link for the CSV file
+        var encodedUri = encodeURI(csvContent);
+        var link = document.createElement("a");
+        link.setAttribute("href", 'data:text/csv;charset=utf-8,' + encodedUri);
+        link.setAttribute("download", "gaze_data.csv");
+        document.body.appendChild(link); // Required for Firefox
+        link.click();
+    }
+
+    function startStudy() {
+        // Redirect to draftdemo.html
+        window.location.href = "draftdemo.html";
+    }
+
+    // Function to update the scatter plot with gaze position data
+    function updateScatterPlot(x, y) {
+        var layout = {
+            title: 'Live Gaze Position Scatter Plot',
+            xaxis: { title: 'X Position' },
+            yaxis: { title: 'Y Position' }
+        };
+
+        var trace = {
+            x: x,
+            y: y,
+            mode: 'markers',
+            type: 'scatter'
+        };
+
+        Plotly.newPlot('plotting_canvas', [trace], layout);
+    }
+
+    // Function to get live gaze position data and update the scatter plot
+    function getGazePositionData() {
+        // Sample function to get live gaze position data
+        var x = []; // Array to store X positions
+        var y = []; // Array to store Y positions
+
+        // Sample code to get live gaze position data (replace with actual implementation)
+        var intervalId = setInterval(function() {
+            var newX = Math.random() * window.innerWidth; // Sample X position
+            var newY = Math.random() * window.innerHeight; // Sample Y position
+
+            x.push(newX);
+            y.push(newY);
+
+            // Limit number of data points to avoid cluttering the plot
+            if (x.length > 100) {
+               
+
+ x.shift();
+                y.shift();
+            }
+
+            updateScatterPlot(x, y); // Update the scatter plot with new data
+        }, 100); // Update every 100 milliseconds (adjust as needed)
+
+        return intervalId; // Return interval id for stopping later
+    }
+
+    // Event listener for the "Start Live Plot" button
+    document.getElementById('start-live-plot').addEventListener('click', function() {
+        var intervalId = getGazePositionData(); // Start getting live gaze position data
+        this.disabled = true; // Disable the button to prevent multiple clicks
+
+        // Add a "Stop Live Plot" button
+        var stopButton = document.createElement('button');
+        stopButton.textContent = 'Stop Live Plot';
+        stopButton.addEventListener('click', function() {
+            clearInterval(intervalId); // Stop updating the scatter plot
+            document.getElementById('start-live-plot').disabled = false; // Enable the start button
+            this.remove(); // Remove the stop button
+        });
+
+        this.parentNode.appendChild(stopButton); // Add the stop button next to the start button
+    });
+</script>
+
+</body>
+</html>
+```
+
